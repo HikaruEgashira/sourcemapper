@@ -55,7 +55,7 @@ func getSourceMap(source string, headers []string, insecureTLS bool, proxyURL ur
 	var body []byte
 	var client http.Client
 
-	log.Printf("[+] Retrieving Sourcemap from %.1024s...\n", source)
+	// log.Printf("[+] Retrieving Sourcemap from %.1024s...\n", source)
 
 	u, err := url.ParseRequestURI(source)
 	if err != nil {
@@ -88,7 +88,7 @@ func getSourceMap(source string, headers []string, insecureTLS bool, proxyURL ur
 
 			if len(headers) > 0 {
 				headerString := strings.Join(headers, "\r\n") + "\r\n\r\n" // squish all the headers together with CRLFs
-				log.Printf("[+] Setting the following headers: \n%s", headerString)
+				// log.Printf("[+] Setting the following headers: \n%s", headerString)
 
 				r := bufio.NewReader(strings.NewReader(headerString))
 				tpReader := textproto.NewReader(r)
@@ -110,10 +110,10 @@ func getSourceMap(source string, headers []string, insecureTLS bool, proxyURL ur
 			body, err = io.ReadAll(res.Body)
 			defer res.Body.Close()
 
-			if res.StatusCode != 200 && len(body) > 0 {
-				log.Printf("[!] WARNING - non-200 status code: %d - Confirm this URL contains valid source map manually!", res.StatusCode)
-				log.Printf("[!] WARNING - sourceMap URL request return != 200 - however, body length > 0 so continuing... ")
-			}
+			// if res.StatusCode != 200 && len(body) > 0 {
+			// log.Printf("[!] WARNING - non-200 status code: %d - Confirm this URL contains valid source map manually!", res.StatusCode)
+			// log.Printf("[!] WARNING - sourceMap URL request return != 200 - however, body length > 0 so continuing... ")
+			// }
 
 			if err != nil {
 				log.Fatalln(err)
@@ -139,12 +139,12 @@ func getSourceMap(source string, headers []string, insecureTLS bool, proxyURL ur
 		}
 	}
 	// Unmarshall the body into the struct.
-	log.Printf("[+] Read %d bytes, parsing JSON.\n", len(body))
+	// log.Printf("[+] Read %d bytes, parsing JSON.\n", len(body))
 	err = json.Unmarshal(body, &m)
 
-	if err != nil {
-		log.Printf("[!] Error parsing JSON - confirm %s is a valid JS sourcemap", source)
-	}
+	// if err != nil {
+	// log.Printf("[!] Error parsing JSON - confirm %s is a valid JS sourcemap", source)
+	// }
 
 	return
 }
@@ -154,7 +154,7 @@ func getSourceMap(source string, headers []string, insecureTLS bool, proxyURL ur
 func getSourceMapFromJS(jsurl string, headers []string, insecureTLS bool, proxyURL url.URL) (sourceMapUrl string, err error) {
 	var client http.Client
 
-	log.Printf("[+] Retrieving JavaScript from URL: %s.\n", jsurl)
+	// log.Printf("[+] Retrieving JavaScript from URL: %s.\n", jsurl)
 
 	// perform the request
 	u, err := url.ParseRequestURI(jsurl)
@@ -183,7 +183,7 @@ func getSourceMapFromJS(jsurl string, headers []string, insecureTLS bool, proxyU
 
 	if len(headers) > 0 {
 		headerString := strings.Join(headers, "\r\n") + "\r\n\r\n" // squish all the headers together with CRLFs
-		log.Printf("[+] Setting the following headers: \n%s", headerString)
+		// log.Printf("[+] Setting the following headers: \n%s", headerString)
 
 		r := bufio.NewReader(strings.NewReader(headerString))
 		tpReader := textproto.NewReader(r)
@@ -214,7 +214,7 @@ func getSourceMapFromJS(jsurl string, headers []string, insecureTLS bool, proxyU
 	}
 
 	if sourceMap != "" {
-		log.Printf("[.] Found SourceMap URI in response headers: %.1024s...", sourceMap)
+		// log.Printf("[.] Found SourceMap URI in response headers: %.1024s...", sourceMap)
 	} else {
 		// parse the javascript
 		body, err := io.ReadAll(res.Body)
@@ -230,7 +230,7 @@ func getSourceMapFromJS(jsurl string, headers []string, insecureTLS bool, proxyU
 		if len(match) != 0 {
 			// only the sourcemap at the end of the file should be valid
 			sourceMap = string(match[len(match)-1][1])
-			log.Printf("[.] Found SourceMap in JavaScript body: %.1024s...", sourceMap)
+			// log.Printf("[.] Found SourceMap in JavaScript body: %.1024s...", sourceMap)
 		}
 	}
 
@@ -268,7 +268,7 @@ func writeFile(p string, content string) error {
 		}
 	}
 
-	log.Printf("[+] Writing %d bytes to %s.\n", len(content), p)
+	// log.Printf("[+] Writing %d bytes to %s.\n", len(content), p)
 	return os.WriteFile(p, []byte(content), 0600)
 }
 
@@ -337,7 +337,7 @@ func main() {
 	}
 
 	// everything below needs to go into its own function
-	log.Printf("[+] Retrieved Sourcemap with version %d, containing %d entries.\n", sm.Version, len(sm.Sources))
+	// log.Printf("[+] Retrieved Sourcemap with version %d, containing %d entries.\n", sm.Version, len(sm.Sources))
 
 	if len(sm.Sources) == 0 {
 		log.Fatal("No sources found.")
