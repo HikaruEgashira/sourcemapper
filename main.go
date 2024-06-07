@@ -282,7 +282,7 @@ func main() {
 	var conf config
 	var err error
 
-	flag.StringVar(&conf.outdir, "output", "", "Source file output directory - REQUIRED")
+	flag.StringVar(&conf.outdir, "output", "", "Source file output directory - no emit if not set")
 	flag.StringVar(&conf.url, "url", "", "URL or path to the Sourcemap file - cannot be used with jsurl")
 	flag.StringVar(&conf.jsurl, "jsurl", "", "URL to JavaScript file - cannot be used with url")
 	flag.StringVar(&conf.proxy, "proxy", "", "Proxy URL")
@@ -291,7 +291,7 @@ func main() {
 	flag.Var(&conf.headers, "header", "A header to send with the request, similar to curl's -H. Can be set multiple times, EG: \"./sourcemapper --header \"Cookie: session=bar\" --header \"Authorization: blerp\"")
 	flag.Parse()
 
-	if *help || (conf.url == "" && conf.jsurl == "") || conf.outdir == "" {
+	if *help || (conf.url == "" && conf.jsurl == "") {
 		flag.Usage()
 		return
 	}
@@ -336,6 +336,11 @@ func main() {
 
 	if sm.Version != 3 {
 		log.Println("[!] Sourcemap is not version 3. This is untested!")
+	}
+
+	if conf.outdir == "" {
+		log.Println("[!] No output directory specified, specify one with -output to emit files.")
+		return
 	}
 
 	if _, err := os.Stat(conf.outdir); os.IsNotExist(err) {
