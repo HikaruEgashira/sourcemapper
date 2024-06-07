@@ -29,12 +29,13 @@ type sourceMap struct {
 
 // command line args
 type config struct {
-	outdir   string     // output directory
+	outdir   string     // output directory (only extract mode)
 	url      string     // sourcemap url
 	jsurl    string     // javascript url
 	proxy    string     // upstream proxy server
 	insecure bool       // skip tls verification
 	headers  headerList // additional user-supplied http headers
+	mode     string     // process mode (extract, detect) (default: extract)
 }
 
 type headerList []string
@@ -150,7 +151,7 @@ func getSourceMap(source string, headers []string, insecureTLS bool, proxyURL ur
 
 // getSourceMapFromJS queries a JavaScript URL, parses its headers and content and looks for sourcemaps
 // follows the rules outlined in https://tc39.es/source-map-spec/#linking-generated-code
-func getSourceMapFromJS(jsurl string, headers []string, insecureTLS bool, proxyURL url.URL) (m sourceMap, err error) {
+func getSourceMapFromJS(jsurl string, headers []string, insecureTLS bool, proxyURL url.URL) (sourceMapUrl string, err error) {
 	var client http.Client
 
 	log.Printf("[+] Retrieving JavaScript from URL: %s.\n", jsurl)
@@ -247,7 +248,7 @@ func getSourceMapFromJS(jsurl string, headers []string, insecureTLS bool, proxyU
 			}
 		}
 
-		return getSourceMap(sourceMapURL.String(), headers, insecureTLS, proxyURL)
+		return sourceMapURL.String(), nil
 	}
 
 	err = errors.New("[!] No sourcemap URL found")
@@ -282,13 +283,14 @@ func main() {
 	var conf config
 	var err error
 
-	flag.StringVar(&conf.outdir, "output", "", "Source file output directory - no emit if not set")
+	flag.StringVar(&conf.outdir, "output", "", "Source file output directory - required for extract mode")
 	flag.StringVar(&conf.url, "url", "", "URL or path to the Sourcemap file - cannot be used with jsurl")
 	flag.StringVar(&conf.jsurl, "jsurl", "", "URL to JavaScript file - cannot be used with url")
 	flag.StringVar(&conf.proxy, "proxy", "", "Proxy URL")
 	help := flag.Bool("help", false, "Show help")
 	flag.BoolVar(&conf.insecure, "insecure", false, "Ignore invalid TLS certificates")
 	flag.Var(&conf.headers, "header", "A header to send with the request, similar to curl's -H. Can be set multiple times, EG: \"./sourcemapper --header \"Cookie: session=bar\" --header \"Authorization: blerp\"")
+	flag.StringVar(&conf.mode, "mode", "extract", "Process mode (extract, detect) (default: extract)")
 	flag.Parse()
 
 	if *help || (conf.url == "" && conf.jsurl == "") {
@@ -318,7 +320,18 @@ func main() {
 			log.Fatal(err)
 		}
 	} else if conf.jsurl != "" {
-		if sm, err = getSourceMapFromJS(conf.jsurl, conf.headers, conf.insecure, proxyURL); err != nil {
+		sourceMapUrl, err := getSourceMapFromJS(conf.jsurl, conf.headers, conf.insecure, proxyURL)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if conf.mode == "detect" {
+			log.Printf("[+] Found sourcemap URL: %s", sourceMapUrl)
+			return
+		}
+
+		sm, err = getSourceMap(sourceMapUrl, conf.headers, conf.insecure, proxyURL)
+		if err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -338,6 +351,10 @@ func main() {
 		log.Println("[!] Sourcemap is not version 3. This is untested!")
 	}
 
+	if conf.mode != "extract" {
+		log.Println("[!] No mode specified, specify one with -mode (detect, extract)")
+		return
+	}
 	if conf.outdir == "" {
 		log.Println("[!] No output directory specified, specify one with -output to emit files.")
 		return
@@ -361,7 +378,7 @@ func main() {
 		scriptPath, scriptData := filepath.Join(conf.outdir, filepath.Clean(sourcePath)), sm.SourcesContent[i]
 		err := writeFile(scriptPath, scriptData)
 		if err != nil {
-			log.Printf("Error writing %s file: %s", scriptPath, err)
+			log.Fatalf("Error writing %s file: %s", scriptPath, err)
 		}
 	}
 
